@@ -23,3 +23,40 @@ go.work.sum
 
 # env file
 .env
+
+# Binary outputs
+/build/
+/bin/
+
+# Development and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled Object files, Static and Dynamic libs
+*.o
+*.a
+*.so
+*.exe
+*.test
+*.prof
+*.out
+
+# Go specific
+/vendor/
+*.test
+/go.work
+
+# Log files
+*.log
+
+# Output files
+examples/*.txt
+
+# macOS specific
+.DS_Store
+
+# Environment variables
+.env.local

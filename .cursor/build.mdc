@@ -1,0 +1,10 @@
+---
+description: 
+globs: Makefile,*.go
+alwaysApply: false
+---
+To build 
+
+make Makefile
+
+To run use [README.md](mdc:README.md) to understand some examples
