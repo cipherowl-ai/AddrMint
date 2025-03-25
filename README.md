@@ -61,7 +61,7 @@ go build -o addrmint main.go
 - `--batch-size`: Number of addresses to batch before reporting progress (default: 1000)
 - `--output-buffer`: Size of the output buffer for better throughput (default: 10000)
 - `--output`: File path to save generated addresses (default: stdout)
-- `--generate-hash`: Prefix each address with a SHA-256 hash (first 6 characters) and comma (default: false)
+- `--generate-hash`: Prefix each address with a base62-encoded xxHash64 hash (8 characters) and comma (default: false)
 
 ### Examples
 
@@ -115,7 +115,7 @@ Performance examples:
 - **Reproducible Generation**: Using the same seed always produces identical addresses
 - **Visual Progress Bar**: Real-time progress indication for large generation tasks
 - **File Output**: Direct output to file with the `--output` parameter
-- **Hash Prefixing**: Option to prefix each address with a short SHA-256 hash using `--generate-hash`
+- **Hash Prefixing**: Option to prefix each address with a base62-encoded xxHash64 hash using `--generate-hash`
 - **Concurrent Generation**: Efficiently utilizes all available CPU cores
 - **Memory Efficient**: Designed to handle extremely large generation tasks with minimal memory usage
 - **Cross-Platform**: Builds available for Linux, Windows, and macOS (via `make build-all`)
@@ -164,4 +164,4 @@ make ci
 - Progress information and visual bar are displayed on stderr
 - Address output can be directed to a file using the `--output` parameter
 - For generating billions of addresses, increase the output buffer size: `--output-buffer 100000`
-- When using `--generate-hash`, each address is prefixed with a 6-character SHA-256 hash and a comma
+- When using `--generate-hash`, each address is prefixed with an 8-character base62-encoded xxHash64 hash and a comma

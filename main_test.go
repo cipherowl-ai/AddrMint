@@ -2,14 +2,14 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/cespare/xxhash/v2"
 )
 
 // TestGenerateEthereumAddress tests the Ethereum address generation
@@ -160,10 +160,21 @@ func TestGenerateHashForAddress(t *testing.T) {
 	// Test address
 	address := "0x122b84B924B5f9bE23b7A8961685B3AB8224ebCa"
 
-	// Generate hash manually
-	h := sha256.New()
-	h.Write([]byte(address))
-	expectedHash := hex.EncodeToString(h.Sum(nil))[:6]
+	// Generate hash using xxHash64 with base62 encoding
+	hash := xxhash.Sum64String(address)
+
+	// Convert to base62
+	const base62Chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	var hashBuilder strings.Builder
+	hashBuilder.Grow(8)
+
+	value := hash
+	for i := 0; i < 8; i++ {
+		hashBuilder.WriteByte(base62Chars[value%62])
+		value /= 62
+	}
+
+	expectedHash := hashBuilder.String()
 
 	// Test the hash generation directly
 	var output bytes.Buffer

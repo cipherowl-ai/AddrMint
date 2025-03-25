@@ -15,9 +15,9 @@ GOFLAGS=-v
 
 # Default target
 .PHONY: all
-all: clean build
+all: clean build-prod
 
-# Build the application
+# Build the application (standard build)
 .PHONY: build
 build:
 	@echo "Building $(BINARY_NAME)..."
@@ -32,6 +32,14 @@ build-prod:
 	@mkdir -p $(BUILD_DIR)
 	$(GO) build -v -ldflags "-s -w -X main.version=$(VERSION)" -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_FILE)
 	@echo "Production build complete. Binary available at $(BUILD_DIR)/$(BINARY_NAME)"
+
+# Build with debug symbols and no optimization
+.PHONY: debug
+debug:
+	@echo "Building debug binary..."
+	@mkdir -p $(BUILD_DIR)
+	$(GO) build -v -gcflags="all=-N -l" $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_FILE)
+	@echo "Debug build complete. Binary available at $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Cross-compile for multiple platforms
 .PHONY: build-all
@@ -57,7 +65,7 @@ build-darwin:
 
 # Run the application
 .PHONY: run
-run: build
+run: build-prod
 	./$(BUILD_DIR)/$(BINARY_NAME) --network ethereum --count 10
 
 # Install dependencies
@@ -117,15 +125,18 @@ examples:
 	./$(BUILD_DIR)/$(BINARY_NAME) --network bitcoin --count 100 --seed 42 > examples/bitcoin_addresses.txt
 	./$(BUILD_DIR)/$(BINARY_NAME) --network solana --count 100 --seed 42 > examples/solana_addresses.txt
 	./$(BUILD_DIR)/$(BINARY_NAME) --network ethereum --count 100 --seed 42 --generate-hash > examples/ethereum_addresses_with_hash.txt
+	./$(BUILD_DIR)/$(BINARY_NAME) --network bitcoin --count 100 --seed 42 --generate-hash > examples/bitcoin_addresses_with_hash.txt
+	./$(BUILD_DIR)/$(BINARY_NAME) --network solana --count 100 --seed 42 --generate-hash > examples/solana_addresses_with_hash.txt
 	@echo "Example outputs generated in examples/ directory."
 
 # Help target for command documentation
 .PHONY: help
 help:
 	@echo "AddrMint - Makefile targets:"
-	@echo "  all           - Clean and build the project"
-	@echo "  build         - Build the binary"
+	@echo "  all           - Clean and build the project (production build)"
+	@echo "  build         - Build the binary (standard build)"
 	@echo "  build-prod    - Build optimized binary for production"
+	@echo "  debug         - Build with debug symbols and no optimization"
 	@echo "  build-all     - Cross-compile for Linux, Windows and macOS"
 	@echo "  run           - Build and run with sample parameters"
 	@echo "  deps          - Download and tidy dependencies"

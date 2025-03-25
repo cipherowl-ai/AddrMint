@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -18,6 +17,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/cespare/xxhash/v2"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -93,7 +93,7 @@ func main() {
 	batchSize := flag.Int("batch-size", 1000, "Number of addresses to batch before reporting progress")
 	outputBufferSize := flag.Int("output-buffer", 10000, "Size of the output buffer for results")
 	outputFile := flag.String("output", "", "Output file path (default: stdout)")
-	generateHash := flag.Bool("generate-hash", false, "Prefix each address with a SHA-256 hash (first 6 characters) and comma")
+	generateHash := flag.Bool("generate-hash", false, "Prefix each address with a base62-encoded xxHash64 hash (8 characters) and comma")
 	flag.Parse()
 
 	// Show version if requested
@@ -205,10 +205,23 @@ func main() {
 // batchSubmitJobs submits jobs in batches for better memory efficiency
 func batchSubmitJobs(jobs chan<- Job, count int, baseSeed, network string, batchSize int, pool *sync.Pool) {
 	for i := 0; i < count; i++ {
-		// Modify seed for each iteration to get different addresses
-		h := sha256.New()
-		h.Write([]byte(baseSeed + fmt.Sprintf("%d", i)))
-		seedValue := hex.EncodeToString(h.Sum(nil))
+		// Generate 32 bytes (256 bits) of data based on xxHash64
+		// We'll use multiple xxHash64 hashes with different salt values to get 32 bytes
+		var seedBytes [32]byte
+
+		// Generate 4 xxHash64 values (8 bytes each) for 32 bytes total
+		for j := 0; j < 4; j++ {
+			hash := xxhash.Sum64String(baseSeed + fmt.Sprintf("%d-%d", i, j))
+			hashBytes := make([]byte, 8)
+			for k := 0; k < 8; k++ {
+				hashBytes[k] = byte(hash >> (k * 8))
+			}
+			// Copy 8 bytes to the appropriate position in the 32-byte array
+			copy(seedBytes[j*8:j*8+8], hashBytes)
+		}
+
+		// Convert to hex string for the seed
+		seedValue := hex.EncodeToString(seedBytes[:])
 
 		// Get a job from the pool
 		job := pool.Get().(*Job)
@@ -262,12 +275,24 @@ func (rc *ResultCollector) AddResult(result Result, progressBar *ProgressBar) {
 	for {
 		if address, exists := rc.resultMap[rc.nextToPrint]; exists {
 			if rc.generateHash {
-				// Generate a hash from the address
-				h := sha256.New()
-				h.Write([]byte(address))
-				hash := hex.EncodeToString(h.Sum(nil))
-				// Use first 6 characters of hash for shorter representation
-				fmt.Fprintf(rc.outputFile, "%s,%s\n", hash[:6], address)
+				// Generate a hash from the address using xxHash64
+				hash := xxhash.Sum64String(address)
+
+				// Use a base62 encoding (0-9, a-z, A-Z) to pack more information into 8 characters
+				const base62Chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				var hashPrefix strings.Builder
+				hashPrefix.Grow(8)
+
+				// Convert 64-bit hash to 8 base62 characters
+				// Each base62 character can represent log2(62) ≈ 5.95 bits
+				// 8 characters can represent about 47.6 bits of information
+				value := hash
+				for i := 0; i < 8; i++ {
+					hashPrefix.WriteByte(base62Chars[value%62])
+					value /= 62
+				}
+
+				fmt.Fprintf(rc.outputFile, "%s,%s\n", hashPrefix.String(), address)
 			} else {
 				fmt.Fprintln(rc.outputFile, address)
 			}
