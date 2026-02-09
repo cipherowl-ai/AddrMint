@@ -58,6 +58,36 @@ func TestGenerateSolanaAddress(t *testing.T) {
 	}
 }
 
+// TestGenerateTonAddress tests the TON address generation
+func TestGenerateTonAddress(t *testing.T) {
+	// Use a fixed seed for reproducible testing
+	seed := "c8c5e5a7f326a2b5f3eee778db6856430d808c32b16e18d8228a93e3d94791a3"
+
+	address := generateTonAddress(seed)
+
+	// TON user-friendly addresses are 48 characters (base64 encoded)
+	if len(address) != 48 {
+		t.Errorf("Expected TON address length to be 48, got %d (address: %s)", len(address), address)
+	}
+
+	// Non-bounceable mainnet addresses start with "UQ"
+	if !strings.HasPrefix(address, "UQ") {
+		t.Errorf("Expected TON address to start with 'UQ', got %s", address)
+	}
+}
+
+// TestGenerateTonAddressDeterministic tests that TON address generation is deterministic
+func TestGenerateTonAddressDeterministic(t *testing.T) {
+	seed := "c8c5e5a7f326a2b5f3eee778db6856430d808c32b16e18d8228a93e3d94791a3"
+
+	addr1 := generateTonAddress(seed)
+	addr2 := generateTonAddress(seed)
+
+	if addr1 != addr2 {
+		t.Errorf("TON address generation not deterministic: %s != %s", addr1, addr2)
+	}
+}
+
 // TestProgressBar tests the progress bar functionality
 func TestProgressBar(t *testing.T) {
 	// Redirect stderr to capture output
@@ -238,8 +268,8 @@ func TestBatchSubmitJobs(t *testing.T) {
 // TestWorker tests the worker function
 func TestWorker(t *testing.T) {
 	// Create channels
-	jobs := make(chan Job, 3)
-	results := make(chan Result, 3)
+	jobs := make(chan Job, 4)
+	results := make(chan Result, 4)
 	var wg sync.WaitGroup
 
 	// Start worker
@@ -250,6 +280,7 @@ func TestWorker(t *testing.T) {
 	jobs <- Job{index: 0, seed: "c8c5e5a7f326a2b5f3eee778db6856430d808c32b16e18d8228a93e3d94791a3", network: "ethereum"}
 	jobs <- Job{index: 1, seed: "c8c5e5a7f326a2b5f3eee778db6856430d808c32b16e18d8228a93e3d94791a3", network: "bitcoin"}
 	jobs <- Job{index: 2, seed: "c8c5e5a7f326a2b5f3eee778db6856430d808c32b16e18d8228a93e3d94791a3", network: "solana"}
+	jobs <- Job{index: 3, seed: "c8c5e5a7f326a2b5f3eee778db6856430d808c32b16e18d8228a93e3d94791a3", network: "ton"}
 	close(jobs)
 
 	// Wait for worker to finish
@@ -263,7 +294,7 @@ func TestWorker(t *testing.T) {
 	// Verify results
 	resultCount := 0
 	for result := range results {
-		if result.index < 0 || result.index > 2 {
+		if result.index < 0 || result.index > 3 {
 			t.Errorf("Unexpected result index: %d", result.index)
 		}
 		if result.address == "" {
@@ -276,7 +307,7 @@ func TestWorker(t *testing.T) {
 	<-done
 
 	// Check that we got all results
-	if resultCount != 3 {
-		t.Errorf("Expected 3 results, got %d", resultCount)
+	if resultCount != 4 {
+		t.Errorf("Expected 4 results, got %d", resultCount)
 	}
 }

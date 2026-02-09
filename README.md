@@ -2,7 +2,7 @@
 
 ## Overview
 
-AddrMint is a high-performance tool for generating large quantities of blockchain addresses (Ethereum, Bitcoin, and Solana). It features advanced concurrency optimizations for maximum throughput when generating millions or billions of addresses.
+AddrMint is a high-performance tool for generating large quantities of blockchain addresses (Ethereum, Bitcoin, Solana, and TON). It features advanced concurrency optimizations for maximum throughput when generating millions or billions of addresses.
 
 In CipherOwl we use this tool to generate addresses to test various of data workloads.
 
@@ -49,12 +49,12 @@ go build -o addrmint main.go
 ## Usage
 
 ```
-./addrmint --network [ethereum|bitcoin|solana] --count [number] --seed [optional_integer_seed] --workers [optional_worker_count] --batch-size [optional_batch_size] --output-buffer [optional_buffer_size] --output [optional_output_file] --generate-hash
+./addrmint --network [ethereum|bitcoin|solana|ton] --count [number] --seed [optional_integer_seed] --workers [optional_worker_count] --batch-size [optional_batch_size] --output-buffer [optional_buffer_size] --output [optional_output_file] --generate-hash
 ```
 
 ### Parameters
 
-- `--network`: The blockchain network (ethereum, bitcoin, or solana) (required)
+- `--network`: The blockchain network (ethereum, bitcoin, solana, or ton) (required)
 - `--count`: Number of addresses to generate (default: 1)
 - `--seed`: Random seed as an integer (default: 0, which generates a random seed)
 - `--workers`: Number of concurrent workers (default: number of CPU cores)
@@ -78,6 +78,11 @@ Generate 1000 Bitcoin addresses with a specific seed and save to a file:
 Generate 5 Solana addresses:
 ```
 ./addrmint --network solana --count 5
+```
+
+Generate 10 TON addresses:
+```
+./addrmint --network ton --count 10
 ```
 
 Generate 1 million Ethereum addresses using 16 workers and a large output buffer:

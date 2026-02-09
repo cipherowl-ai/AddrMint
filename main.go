@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -19,6 +20,7 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
 // Version information (can be overridden by build flags)
@@ -110,11 +112,11 @@ func main() {
 
 	// Validate network
 	if *network == "" {
-		log.Fatal("Network is required. Use --network ethereum|bitcoin|solana")
+		log.Fatal("Network is required. Use --network ethereum|bitcoin|solana|ton")
 	}
 
-	if *network != "ethereum" && *network != "bitcoin" && *network != "solana" {
-		log.Fatal("Network must be ethereum, bitcoin, or solana")
+	if *network != "ethereum" && *network != "bitcoin" && *network != "solana" && *network != "ton" {
+		log.Fatal("Network must be ethereum, bitcoin, solana, or ton")
 	}
 
 	// Prepare the initial seed
@@ -283,18 +285,20 @@ func worker(id int, jobs <-chan Job, results chan<- Result, wg *sync.WaitGroup) 
 	defer wg.Done()
 
 	for job := range jobs {
-		var address string
+		var addr string
 
 		switch job.network {
 		case "ethereum":
-			address = generateEthereumAddress(job.seed)
+			addr = generateEthereumAddress(job.seed)
 		case "bitcoin":
-			address = generateBitcoinAddress(job.seed)
+			addr = generateBitcoinAddress(job.seed)
 		case "solana":
-			address = generateSolanaAddress(job.seed)
+			addr = generateSolanaAddress(job.seed)
+		case "ton":
+			addr = generateTonAddress(job.seed)
 		}
 
-		results <- Result{index: job.index, address: address}
+		results <- Result{index: job.index, address: addr}
 	}
 }
 
@@ -353,4 +357,29 @@ func generateSolanaAddress(seed string) string {
 		log.Fatal("Failed to create Solana account:", err)
 	}
 	return account.PublicKey.ToBase58()
+}
+
+func generateTonAddress(seed string) string {
+	// Convert seed to private key bytes
+	seedBytes, err := hex.DecodeString(seed)
+	if err != nil {
+		log.Fatal("Invalid seed:", err)
+	}
+
+	// Create ed25519 private key from seed (first 32 bytes)
+	privKey := ed25519.NewKeyFromSeed(seedBytes[:32])
+	pubKey := privKey.Public().(ed25519.PublicKey)
+
+	// Generate TON V5R1 address (most common modern wallet)
+	// Using mainnet global ID (-239) and workchain 0
+	addr, err := wallet.AddressFromPubKey(pubKey, wallet.ConfigV5R1Final{
+		NetworkGlobalID: -239, // Mainnet
+		Workchain:       0,
+	}, 0, 0)
+	if err != nil {
+		log.Fatal("Failed to create TON address:", err)
+	}
+
+	// Return non-bounceable user-friendly address (UQ... format)
+	return addr.Bounce(false).String()
 }
